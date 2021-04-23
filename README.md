@@ -1,1 +1,2 @@
-# Quafoo
+# Getting Started
+Halo Quafoo
