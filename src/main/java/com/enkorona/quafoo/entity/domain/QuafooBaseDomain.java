@@ -24,10 +24,6 @@ public class QuafooBaseDomain {
      */
     private Long createUserId;
 
-    /**
-     * 租户id
-     */
-    private String tenantId;
 
     /**
      * 更新时间
@@ -46,7 +42,6 @@ public class QuafooBaseDomain {
                 ", version=" + version +
                 ", createTime=" + createTime +
                 ", createUserId='" + createUserId + '\'' +
-                ", tenantId='" + tenantId + '\'' +
                 ", updateTime=" + updateTime +
                 ", updateUserId='" + updateUserId + '\'' +
                 '}';
@@ -72,10 +67,6 @@ public class QuafooBaseDomain {
         return createUserId;
     }
 
-    public String getTenantId() {
-        return tenantId;
-    }
-
     public LocalDateTime getUpdateTime() {
         return updateTime;
     }
@@ -94,10 +85,6 @@ public class QuafooBaseDomain {
 
     public void setCreateUserId(Long createUserId) {
         this.createUserId = createUserId;
-    }
-
-    public void setTenantId(String tenantId) {
-        this.tenantId = tenantId;
     }
 
     public void setUpdateTime(LocalDateTime updateTime) {
