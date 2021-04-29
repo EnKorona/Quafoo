@@ -24,7 +24,6 @@ public class QuafooBaseDomain {
      */
     private Long createUserId;
 
-
     /**
      * 更新时间
      */
