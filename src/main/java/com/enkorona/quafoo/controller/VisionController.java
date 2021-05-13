@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping(value = "/vision")
 public class VisionController {
-    @RequestMapping("/vision")
+    @RequestMapping("/hello")
     public String index() {
         return "Hello Vision";
     }
