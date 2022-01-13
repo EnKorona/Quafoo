@@ -93,6 +93,7 @@ public class HashSet<E>
 {
     static final long serialVersionUID = -5024744406713321676L;
 
+    // 唯一的属性：map，类型为HashMap。key存储HashSet中的key，value用统一的PRESENT存
     private transient HashMap<E,Object> map;
 
     // Dummy value to associate with an Object in the backing Map
@@ -116,7 +117,9 @@ public class HashSet<E>
      * @throws NullPointerException if the specified collection is null
      */
     public HashSet(Collection<? extends E> c) {
+        // set最小容量是16
         map = new HashMap<>(Math.max((int) (c.size()/.75f) + 1, 16));
+        // 批量添加
         addAll(c);
     }
 
@@ -200,6 +203,7 @@ public class HashSet<E>
      * @param o element whose presence in this set is to be tested
      * @return <tt>true</tt> if this set contains the specified element
      */
+    // 判断key是否存在
     public boolean contains(Object o) {
         return map.containsKey(o);
     }
@@ -232,6 +236,7 @@ public class HashSet<E>
      * @param o object to be removed from this set, if present
      * @return <tt>true</tt> if the set contained the specified element
      */
+    // 为什么要这么写呢？
     public boolean remove(Object o) {
         return map.remove(o)==PRESENT;
     }
@@ -240,6 +245,7 @@ public class HashSet<E>
      * Removes all of the elements from this set.
      * The set will be empty after this call returns.
      */
+    // 清空HashSet
     public void clear() {
         map.clear();
     }
@@ -253,7 +259,9 @@ public class HashSet<E>
     @SuppressWarnings("unchecked")
     public Object clone() {
         try {
+            // 调用父方法，克隆创建 newSet 对象
             HashSet<E> newSet = (HashSet<E>) super.clone();
+            // 克隆map属性，赋值给newSet
             newSet.map = (HashMap<E, Object>) map.clone();
             return newSet;
         } catch (CloneNotSupportedException e) {
@@ -271,19 +279,25 @@ public class HashSet<E>
      *             (int), followed by all of its elements (each an Object) in
      *             no particular order.
      */
+    // 序列化HashSet对象
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException {
         // Write out any hidden serialization magic
+        // 写入静态属性，非transient属性
         s.defaultWriteObject();
 
         // Write out HashMap capacity and load factor
+        // 写入map table数组大小
         s.writeInt(map.capacity());
+        // 写入加载因子
         s.writeFloat(map.loadFactor());
 
         // Write out size
+        // 写入map大小
         s.writeInt(map.size());
 
         // Write out all elements in the proper order.
+        // 遍历map，逐个序列化
         for (E e : map.keySet())
             s.writeObject(e);
     }
@@ -292,33 +306,42 @@ public class HashSet<E>
      * Reconstitute the <tt>HashSet</tt> instance from a stream (that is,
      * deserialize it).
      */
+    // 反序列化为HashSet对象
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
         // Read in any hidden serialization magic
+        // 读取非静态属性、非transient属性
         s.defaultReadObject();
 
         // Read capacity and verify non-negative.
+        // 读取 HashMap table 数组大小
         int capacity = s.readInt();
+        // 校验 capacity 参数
         if (capacity < 0) {
             throw new InvalidObjectException("Illegal capacity: " +
                                              capacity);
         }
 
         // Read load factor and verify positive and non NaN.
+        // 获得加载因子loadFactor
         float loadFactor = s.readFloat();
+        // 校验 loadFactor 参数
         if (loadFactor <= 0 || Float.isNaN(loadFactor)) {
             throw new InvalidObjectException("Illegal load factor: " +
                                              loadFactor);
         }
 
         // Read size and verify non-negative.
+        // 读取 key-value 键值对数量 size
         int size = s.readInt();
+        // 校验 size 参数
         if (size < 0) {
             throw new InvalidObjectException("Illegal size: " +
                                              size);
         }
         // Set the capacity according to the size and load factor ensuring that
         // the HashMap is at least 25% full but clamping to maximum capacity.
+        // 计算容量
         capacity = (int) Math.min(size * Math.min(1 / loadFactor, 4.0f),
                 HashMap.MAXIMUM_CAPACITY);
 
@@ -331,11 +354,13 @@ public class HashSet<E>
                      .checkArray(s, Map.Entry[].class, HashMap.tableSizeFor(capacity));
 
         // Create backing HashMap
+        // 创建 LinkedHashMap 或 HashMap 对象
         map = (((HashSet<?>)this) instanceof LinkedHashSet ?
                new LinkedHashMap<E,Object>(capacity, loadFactor) :
                new HashMap<E,Object>(capacity, loadFactor));
 
         // Read in all elements in the proper order.
+        // 遍历读取 key 键，添加到 map 中
         for (int i=0; i<size; i++) {
             @SuppressWarnings("unchecked")
                 E e = (E) s.readObject();
