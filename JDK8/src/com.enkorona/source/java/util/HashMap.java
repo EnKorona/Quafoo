@@ -598,6 +598,7 @@ public class HashMap<K,V> extends AbstractMap<K,V>
      */
     final Node<K,V> getNode(int hash, Object key) {
         Node<K,V>[] tab; Node<K,V> first, e; int n; K k;
+        // (n - 1) & hash == hash % n，意思是把哈希值取模，使得他的值分布到到数组范围上
         if ((tab = table) != null && (n = tab.length) > 0 &&
                 (first = tab[(n - 1) & hash]) != null) {
             // 如果找到的first节点就是找到的，则直接使用即可
