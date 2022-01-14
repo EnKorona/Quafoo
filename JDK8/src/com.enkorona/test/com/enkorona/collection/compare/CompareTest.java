@@ -1,5 +1,6 @@
 package com.enkorona.collection.compare;
 
+import com.enkorona.collection.Student;
 import org.junit.Test;
 
 import java.util.*;

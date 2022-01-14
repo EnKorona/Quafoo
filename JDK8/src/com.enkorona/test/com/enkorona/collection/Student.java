@@ -1,4 +1,4 @@
-package com.enkorona.collection.compare;
+package com.enkorona.collection;
 
 public class Student implements Comparable<Student> {
     private String name;

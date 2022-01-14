@@ -118,18 +118,22 @@ public class TreeMap<K,V>
      *
      * @serial
      */
+    // key排序器
     private final Comparator<? super K> comparator;
 
+    // 红黑树的根节点
     private transient Entry<K,V> root;
 
     /**
      * The number of entries in the tree
      */
+    // key-value键值对的数量
     private transient int size = 0;
 
     /**
      * The number of structural modifications to the tree.
      */
+    // 修改次数
     private transient int modCount = 0;
 
     /**
@@ -144,6 +148,7 @@ public class TreeMap<K,V>
      * {@code put(Object key, Object value)} call will throw a
      * {@code ClassCastException}.
      */
+    // 默认构造方法，不使用定制的排序器
     public TreeMap() {
         comparator = null;
     }
@@ -162,6 +167,7 @@ public class TreeMap<K,V>
      *        If {@code null}, the {@linkplain Comparable natural
      *        ordering} of the keys will be used.
      */
+    // 可按照定制排序器进行排序
     public TreeMap(Comparator<? super K> comparator) {
         this.comparator = comparator;
     }
@@ -182,6 +188,7 @@ public class TreeMap<K,V>
      */
     public TreeMap(Map<? extends K, ? extends V> m) {
         comparator = null;
+        // 添加所有元素
         putAll(m);
     }
 
@@ -195,8 +202,10 @@ public class TreeMap<K,V>
      * @throws NullPointerException if the specified map is null
      */
     public TreeMap(SortedMap<K, ? extends V> m) {
+        // 设置comparator属性
         comparator = m.comparator();
         try {
+            // 使用m构造红黑树
             buildFromSorted(m.size(), m.entrySet().iterator(), null, null);
         } catch (java.io.IOException cannotHappen) {
         } catch (ClassNotFoundException cannotHappen) {
@@ -311,11 +320,16 @@ public class TreeMap<K,V>
      */
     public void putAll(Map<? extends K, ? extends V> map) {
         int mapSize = map.size();
+        // TODO 这是什么情况？调用buildFromSorted方法来优化处理
+        // 如果TreeMap大小为0，map大小非0，而且map是sortedMap类型
         if (size==0 && mapSize!=0 && map instanceof SortedMap) {
             Comparator<?> c = ((SortedMap<?,?>)map).comparator();
+            // 如果排序规则相同
             if (c == comparator || (c != null && c.equals(comparator))) {
+                // 增加修改次数
                 ++modCount;
                 try {
+                    // 基于sortedMap顺序迭代插入即可
                     buildFromSorted(mapSize, map.entrySet().iterator(),
                                     null, null);
                 } catch (java.io.IOException cannotHappen) {
@@ -324,6 +338,7 @@ public class TreeMap<K,V>
                 return;
             }
         }
+        // 不符合上述条件，直接遍历map来添加
         super.putAll(map);
     }
 
@@ -2051,11 +2066,17 @@ public class TreeMap<K,V>
      */
 
     static final class Entry<K,V> implements Map.Entry<K,V> {
+        // 键
         K key;
+        // 值
         V value;
+        // 左子节点
         Entry<K,V> left;
+        // 右子节点
         Entry<K,V> right;
+        // 父节点
         Entry<K,V> parent;
+        // 颜色
         boolean color = BLACK;
 
         /**
@@ -2504,7 +2525,10 @@ public class TreeMap<K,V>
                                  java.io.ObjectInputStream str,
                                  V defaultVal)
         throws  java.io.IOException, ClassNotFoundException {
+        // 设置key-value键值对的数量
         this.size = size;
+        // computeRedLevel(size) 方法，计算红黑树的高度
+        // 使用m构造红黑树，返回根节点
         root = buildFromSorted(0, 0, size-1, computeRedLevel(size),
                                it, str, defaultVal);
     }
@@ -2523,6 +2547,7 @@ public class TreeMap<K,V>
      * @param redLevel the level at which nodes should be red.
      *        Must be equal to computeRedLevel for tree of this size.
      */
+    // 中序遍历，递归建树
     @SuppressWarnings("unchecked")
     private final Entry<K,V> buildFromSorted(int level, int lo, int hi,
                                              int redLevel,
@@ -2542,11 +2567,15 @@ public class TreeMap<K,V>
          * ensuring that items are extracted in corresponding order.
          */
 
+        // 递归结束
         if (hi < lo) return null;
 
+        // 计算中间值
         int mid = (lo + hi) >>> 1;
 
+        // 创建左子树
         Entry<K,V> left  = null;
+        // 递归创建左子树
         if (lo < mid)
             left = buildFromSorted(level+1, lo, mid - 1, redLevel,
                                    it, str, defaultVal);
@@ -2554,8 +2583,10 @@ public class TreeMap<K,V>
         // extract key and/or value from iterator or stream
         K key;
         V value;
+        // 使用it迭代器，获得下一个值
         if (it != null) {
             if (defaultVal==null) {
+                // 从it获得下一个Entry节点
                 Map.Entry<?,?> entry = (Map.Entry<?,?>)it.next();
                 key = (K)entry.getKey();
                 value = (V)entry.getValue();
@@ -2563,22 +2594,27 @@ public class TreeMap<K,V>
                 key = (K)it.next();
                 value = defaultVal;
             }
+            // TODO 处理str流的情况？
         } else { // use stream
             key = (K) str.readObject();
             value = (defaultVal != null ? defaultVal : (V) str.readObject());
         }
 
+        // 创建中间节点
         Entry<K,V> middle =  new Entry<>(key, value, null);
 
         // color nodes in non-full bottommost level red
+        // 如果到树的最大高度，设置为红节点
         if (level == redLevel)
             middle.color = RED;
 
+        // 如果左子树非空，则接到根节点左侧
         if (left != null) {
             middle.left = left;
             left.parent = middle;
         }
 
+        // 递归创建右子树
         if (mid < hi) {
             Entry<K,V> right = buildFromSorted(level+1, mid+1, hi, redLevel,
                                                it, str, defaultVal);
@@ -2586,6 +2622,7 @@ public class TreeMap<K,V>
             right.parent = middle;
         }
 
+        // 返回当前节点
         return middle;
     }
 
