@@ -254,6 +254,7 @@ public class TreeMap<K,V>
      *         {@code false} otherwise
      * @since 1.2
      */
+    // 通过中序遍历，查找值为value的节点是否存在
     public boolean containsValue(Object value) {
         for (Entry<K,V> e = getFirstEntry(); e != null; e = successor(e))
             if (valEquals(value, e.value))
@@ -283,7 +284,9 @@ public class TreeMap<K,V>
      *         and this map uses natural ordering, or its comparator
      *         does not permit null keys
      */
+    // 获得key值对应的value
     public V get(Object key) {
+        // 查找key对应的Entry节点
         Entry<K,V> p = getEntry(key);
         return (p==null ? null : p.value);
     }
@@ -356,12 +359,15 @@ public class TreeMap<K,V>
      */
     final Entry<K,V> getEntry(Object key) {
         // Offload comparator-based version for sake of performance
+        // 如果自定义了比较器，就基于比较器来查找
         if (comparator != null)
             return getEntryUsingComparator(key);
+        // 如果key为空，抛出空指针异常
         if (key == null)
             throw new NullPointerException();
         @SuppressWarnings("unchecked")
             Comparable<? super K> k = (Comparable<? super K>) key;
+        // 遍历红黑树
         Entry<K,V> p = root;
         while (p != null) {
             int cmp = k.compareTo(p.key);
@@ -381,6 +387,7 @@ public class TreeMap<K,V>
      * that are less dependent on comparator performance, but is
      * worthwhile here.)
      */
+    // 基于comparator比较器来查找
     final Entry<K,V> getEntryUsingComparator(Object key) {
         @SuppressWarnings("unchecked")
             K k = (K) key;
@@ -408,17 +415,21 @@ public class TreeMap<K,V>
      */
     final Entry<K,V> getCeilingEntry(K key) {
         Entry<K,V> p = root;
+        // 循环遍历红黑树
         while (p != null) {
             int cmp = compare(key, p.key);
+            // 如果当前节点比key大，则在左子树中找
             if (cmp < 0) {
                 if (p.left != null)
                     p = p.left;
                 else
                     return p;
             } else if (cmp > 0) {
+                // 如果当前节点比key小，则在右子树中找
                 if (p.right != null) {
                     p = p.right;
                 } else {
+                    // 找到当前节点的中序遍历后继节点
                     Entry<K,V> parent = p.parent;
                     Entry<K,V> ch = p;
                     while (parent != null && ch == parent.right) {
@@ -428,8 +439,10 @@ public class TreeMap<K,V>
                     return parent;
                 }
             } else
+                // 如果找到了返回p就行
                 return p;
         }
+        // 找不到，返回null
         return null;
     }
 
@@ -451,6 +464,7 @@ public class TreeMap<K,V>
                 if (p.left != null) {
                     p = p.left;
                 } else {
+                    // 与ceilingEntry()逻辑不同之处在于此处寻找前驱节点的值
                     Entry<K,V> parent = p.parent;
                     Entry<K,V> ch = p;
                     while (parent != null && ch == parent.left) {
@@ -494,6 +508,7 @@ public class TreeMap<K,V>
                     return parent;
                 }
             }
+            // 与ceilingEntry()的差异在于此处相等的情况下不返回Entry
         }
         return null;
     }
@@ -525,6 +540,7 @@ public class TreeMap<K,V>
                     return parent;
                 }
             }
+            // 与floorEntry()不同之处在于此处相等时不返回
         }
         return null;
     }
@@ -549,7 +565,9 @@ public class TreeMap<K,V>
      */
     public V put(K key, V value) {
         Entry<K,V> t = root;
+        // 如果没有根节点，就直接插入到根节点
         if (t == null) {
+            // TODO 自己和自己比较？什么意思
             compare(key, key); // type (and possibly null) check
 
             root = new Entry<>(key, value, null);
@@ -557,28 +575,35 @@ public class TreeMap<K,V>
             modCount++;
             return null;
         }
-        int cmp;
-        Entry<K,V> parent;
+        int cmp;    // 用来存key比父节点小还是大
+        Entry<K,V> parent; // 用来寻找待插入节点的父节点
         // split comparator and comparable paths
         Comparator<? super K> cpr = comparator;
+        //如果有自定义的比较器，就用自定义的
         if (cpr != null) {
             do {
+                // parant节点存的是当前能确定的最小祖先节点，每次迭代之后会更新一次
                 parent = t;
                 cmp = cpr.compare(key, t.key);
+                // 如果小于0从左子树找key
                 if (cmp < 0)
                     t = t.left;
+                // 如果大于0从右子树找key
                 else if (cmp > 0)
                     t = t.right;
                 else
+                    // 如果相等了，直接用value把原key替换掉
                     return t.setValue(value);
             } while (t != null);
         }
         else {
+            // 如果没有自定义比较器，用的是Comparable中的比较方式，key不能为null，如果为null需要抛出空指针异常
             if (key == null)
                 throw new NullPointerException();
             @SuppressWarnings("unchecked")
                 Comparable<? super K> k = (Comparable<? super K>) key;
             do {
+                // 迭代方式同上
                 parent = t;
                 cmp = k.compareTo(t.key);
                 if (cmp < 0)
@@ -589,13 +614,17 @@ public class TreeMap<K,V>
                     return t.setValue(value);
             } while (t != null);
         }
+        // 如果没找到值为key的节点，就新建一个，插入到树中
         Entry<K,V> e = new Entry<>(key, value, parent);
         if (cmp < 0)
             parent.left = e;
         else
             parent.right = e;
+        // 插入之后将树调整平衡
         fixAfterInsertion(e);
+        // 元素个数+1
         size++;
+        // 修改次数+1(基于树结构实现，无需考虑扩容)
         modCount++;
         return null;
     }
@@ -615,11 +644,14 @@ public class TreeMap<K,V>
      *         does not permit null keys
      */
     public V remove(Object key) {
+        // 获得key对应的Entry节点
         Entry<K,V> p = getEntry(key);
+        // 没找到，返回null
         if (p == null)
             return null;
 
         V oldValue = p.value;
+        // 删除p节点
         deleteEntry(p);
         return oldValue;
     }
@@ -628,6 +660,7 @@ public class TreeMap<K,V>
      * Removes all of the mappings from this map.
      * The map will be empty after this call returns.
      */
+    // 清空树
     public void clear() {
         modCount++;
         size = 0;
@@ -641,6 +674,7 @@ public class TreeMap<K,V>
      * @return a shallow copy of this map
      */
     public Object clone() {
+        // 创建一个TreeMap对象
         TreeMap<?,?> clone;
         try {
             clone = (TreeMap<?,?>) super.clone();
@@ -649,6 +683,7 @@ public class TreeMap<K,V>
         }
 
         // Put clone into "virgin" state (except for comparator)
+        // TODO 没太看懂为什么要重置克隆对象的属性
         clone.root = null;
         clone.size = 0;
         clone.modCount = 0;
@@ -658,6 +693,7 @@ public class TreeMap<K,V>
 
         // Initialize clone with our mappings
         try {
+            // 将当前树的节点依次复制
             clone.buildFromSorted(size, entrySet().iterator(), null, null);
         } catch (java.io.IOException cannotHappen) {
         } catch (ClassNotFoundException cannotHappen) {
@@ -671,6 +707,7 @@ public class TreeMap<K,V>
     /**
      * @since 1.6
      */
+    // 获得首个节点
     public Map.Entry<K,V> firstEntry() {
         return exportEntry(getFirstEntry());
     }
@@ -678,6 +715,7 @@ public class TreeMap<K,V>
     /**
      * @since 1.6
      */
+    // 获得尾部的Entry节点
     public Map.Entry<K,V> lastEntry() {
         return exportEntry(getLastEntry());
     }
@@ -685,9 +723,12 @@ public class TreeMap<K,V>
     /**
      * @since 1.6
      */
+    // 移除首个Entry节点并返回
     public Map.Entry<K,V> pollFirstEntry() {
+        // 拿到首个Entry节点
         Entry<K,V> p = getFirstEntry();
         Map.Entry<K,V> result = exportEntry(p);
+        // 如果存在就删除
         if (p != null)
             deleteEntry(p);
         return result;
@@ -696,6 +737,7 @@ public class TreeMap<K,V>
     /**
      * @since 1.6
      */
+    // 移除尾部Entry节点并返回
     public Map.Entry<K,V> pollLastEntry() {
         Entry<K,V> p = getLastEntry();
         Map.Entry<K,V> result = exportEntry(p);
@@ -711,6 +753,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回小于key的节点，逻辑类似floorEntry()
     public Map.Entry<K,V> lowerEntry(K key) {
         return exportEntry(getLowerEntry(key));
     }
@@ -722,6 +765,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回key不返回Entry
     public K lowerKey(K key) {
         return keyOrNull(getLowerEntry(key));
     }
@@ -733,6 +777,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回小于等于key的节点，与ceilingEntry()逻辑类似
     public Map.Entry<K,V> floorEntry(K key) {
         return exportEntry(getFloorEntry(key));
     }
@@ -744,6 +789,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回key不返回Entry
     public K floorKey(K key) {
         return keyOrNull(getFloorEntry(key));
     }
@@ -755,6 +801,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回大于等于 key 的节点
     public Map.Entry<K,V> ceilingEntry(K key) {
         return exportEntry(getCeilingEntry(key));
     }
@@ -766,6 +813,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回key不返回Entry
     public K ceilingKey(K key) {
         return keyOrNull(getCeilingEntry(key));
     }
@@ -777,6 +825,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回大于key的节点，逻辑类似ceilingEntry()
     public Map.Entry<K,V> higherEntry(K key) {
         return exportEntry(getHigherEntry(key));
     }
@@ -788,6 +837,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @since 1.6
      */
+    // 返回key不返回Entry
     public K higherKey(K key) {
         return keyOrNull(getHigherEntry(key));
     }
@@ -828,6 +878,7 @@ public class TreeMap<K,V>
      * operations.  It does not support the {@code add} or {@code addAll}
      * operations.
      */
+    // 获得正序的keySet
     public Set<K> keySet() {
         return navigableKeySet();
     }
@@ -843,6 +894,7 @@ public class TreeMap<K,V>
     /**
      * @since 1.6
      */
+    // 获得倒序的keySet
     public NavigableSet<K> descendingKeySet() {
         return descendingMap().navigableKeySet();
     }
@@ -868,6 +920,7 @@ public class TreeMap<K,V>
      * {@code retainAll} and {@code clear} operations.  It does not
      * support the {@code add} or {@code addAll} operations.
      */
+    // 获得正序的value集合
     public Collection<V> values() {
         Collection<V> vs = values;
         if (vs == null) {
@@ -899,6 +952,7 @@ public class TreeMap<K,V>
      * {@code clear} operations.  It does not support the
      * {@code add} or {@code addAll} operations.
      */
+    // 获得Entry集合
     public Set<Map.Entry<K,V>> entrySet() {
         EntrySet es = entrySet;
         return (es != null) ? es : (entrySet = new EntrySet());
@@ -923,6 +977,7 @@ public class TreeMap<K,V>
      * @throws IllegalArgumentException {@inheritDoc}
      * @since 1.6
      */
+    // 查找范围元素
     public NavigableMap<K,V> subMap(K fromKey, boolean fromInclusive,
                                     K toKey,   boolean toInclusive) {
         return new AscendingSubMap<>(this,
@@ -965,6 +1020,7 @@ public class TreeMap<K,V>
      *         does not permit null keys
      * @throws IllegalArgumentException {@inheritDoc}
      */
+    // 查找范围内的元素
     public SortedMap<K,V> subMap(K fromKey, K toKey) {
         return subMap(fromKey, true, toKey, false);
     }
@@ -1121,10 +1177,12 @@ public class TreeMap<K,V>
      * submap classes.
      */
 
+    // 获得key的正序迭代器
     Iterator<K> keyIterator() {
         return new KeyIterator(getFirstEntry());
     }
 
+    // 获得key的倒序迭代器
     Iterator<K> descendingKeyIterator() {
         return new DescendingKeyIterator(getLastEntry());
     }
@@ -1203,9 +1261,13 @@ public class TreeMap<K,V>
     /**
      * Base class for TreeMap Iterators
      */
+    // TreeMap的通用Iterator抽象类
     abstract class PrivateEntryIterator<T> implements Iterator<T> {
+        // 下一个节点
         Entry<K,V> next;
+        // 最后返回的节点
         Entry<K,V> lastReturned;
+        // 当前的修改次数
         int expectedModCount;
 
         PrivateEntryIterator(Entry<K,V> first) {
@@ -1254,6 +1316,7 @@ public class TreeMap<K,V>
         }
     }
 
+    // 获得Entry的正序迭代器
     final class EntryIterator extends PrivateEntryIterator<Map.Entry<K,V>> {
         EntryIterator(Entry<K,V> first) {
             super(first);
@@ -1263,6 +1326,7 @@ public class TreeMap<K,V>
         }
     }
 
+    // 获得value的正序迭代器
     final class ValueIterator extends PrivateEntryIterator<V> {
         ValueIterator(Entry<K,V> first) {
             super(first);
@@ -1272,6 +1336,7 @@ public class TreeMap<K,V>
         }
     }
 
+    // 获得key的正序迭代器
     final class KeyIterator extends PrivateEntryIterator<K> {
         KeyIterator(Entry<K,V> first) {
             super(first);
@@ -1281,6 +1346,7 @@ public class TreeMap<K,V>
         }
     }
 
+    // 获得key的倒序迭代器
     final class DescendingKeyIterator extends PrivateEntryIterator<K> {
         DescendingKeyIterator(Entry<K,V> first) {
             super(first);
@@ -1288,6 +1354,7 @@ public class TreeMap<K,V>
         public K next() {
             return prevEntry().key;
         }
+        // 重写remove()方法
         public void remove() {
             if (lastReturned == null)
                 throw new IllegalStateException();
@@ -1306,6 +1373,7 @@ public class TreeMap<K,V>
      */
     @SuppressWarnings("unchecked")
     final int compare(Object k1, Object k2) {
+        // 如果没有自定义比较器，就用key进行比较，如果定义了就用比较器来比较
         return comparator==null ? ((Comparable<? super K>)k1).compareTo((K)k2)
             : comparator.compare((K)k1, (K)k2);
     }
@@ -1371,23 +1439,30 @@ public class TreeMap<K,V>
          * if loInclusive is true, lo is the inclusive bound, else lo
          * is the exclusive bound. Similarly for the upper bound.
          */
+        // lo：开始位置，hi：结束位置
         final K lo, hi;
+        // 是否从TreeMap开头开始，如果是的话，lo可以不传
+        // 是否从TreeMap结尾结束，如果是的话，hi可以不传
         final boolean fromStart, toEnd;
+        // 是否把lo和hi包含进去
         final boolean loInclusive, hiInclusive;
 
         NavigableSubMap(TreeMap<K,V> m,
                         boolean fromStart, K lo, boolean loInclusive,
                         boolean toEnd,     K hi, boolean hiInclusive) {
+            // 如果既不从开头开始，又不从结尾结束，那么就要校验lo是否小于hi
             if (!fromStart && !toEnd) {
                 if (m.compare(lo, hi) > 0)
                     throw new IllegalArgumentException("fromKey > toKey");
             } else {
+                // TODO 这是什么操作？
                 if (!fromStart) // type check
                     m.compare(lo, lo);
                 if (!toEnd)
                     m.compare(hi, hi);
             }
 
+            // 赋值属性
             this.m = m;
             this.fromStart = fromStart;
             this.lo = lo;
@@ -1399,15 +1474,18 @@ public class TreeMap<K,V>
 
         // internal utilities
 
+        // 判断key是否小于Navigable的开始位置的key
         final boolean tooLow(Object key) {
             if (!fromStart) {
                 int c = m.compare(key, lo);
+                // 如果key < lo,那肯定超出了；如果相等，就再看下是开区间还是闭区间
                 if (c < 0 || (c == 0 && !loInclusive))
                     return true;
             }
             return false;
         }
 
+        // 判断key是否大于Navigable的结束位置的key，逻辑同上
         final boolean tooHigh(Object key) {
             if (!toEnd) {
                 int c = m.compare(key, hi);
@@ -1417,10 +1495,12 @@ public class TreeMap<K,V>
             return false;
         }
 
+        // 校验传入的key是否在子范围中
         final boolean inRange(Object key) {
             return !tooLow(key) && !tooHigh(key);
         }
 
+        // 判断是否在闭合的范围内
         final boolean inClosedRange(Object key) {
             return (fromStart || m.compare(key, lo) >= 0)
                 && (toEnd || m.compare(hi, key) >= 0);
@@ -1436,14 +1516,16 @@ public class TreeMap<K,V>
          * versions that invert senses for descending maps
          */
 
+        // 获得NavigableSubMap开始位置的Entry节点
         final TreeMap.Entry<K,V> absLowest() {
             TreeMap.Entry<K,V> e =
-                (fromStart ?  m.getFirstEntry() :
-                 (loInclusive ? m.getCeilingEntry(lo) :
-                                m.getHigherEntry(lo)));
+                (fromStart ?  m.getFirstEntry() :   // 如果就是从TreeMap开始位置开始的，那就直接返回首个Entry节点
+                 (loInclusive ? m.getCeilingEntry(lo) : // 否则，如果从lo开始(包含)，就找>=lo的最近Entry节点；
+                                m.getHigherEntry(lo))); // 如果从lo开始(不包含)，那就找>lo的最近Entry节点
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
+        // 获得NavigableSubMap结束位置的Entry节点，逻辑同上
         final TreeMap.Entry<K,V> absHighest() {
             TreeMap.Entry<K,V> e =
                 (toEnd ?  m.getLastEntry() :
@@ -1452,13 +1534,17 @@ public class TreeMap<K,V>
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
+        // 获得NavigableSubMap中>=key的最近Entry节点
         final TreeMap.Entry<K,V> absCeiling(K key) {
+            // 如果key太小，则只能通过absLowest()方法获得NavigableSubMap开始位置的Entry节点
             if (tooLow(key))
                 return absLowest();
+            // 获得NavigableSubMap中>=key的最近Entry节点
             TreeMap.Entry<K,V> e = m.getCeilingEntry(key);
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
+        // 获得NavigableSubMap中>key的最近Entry节点，逻辑同上
         final TreeMap.Entry<K,V> absHigher(K key) {
             if (tooLow(key))
                 return absLowest();
@@ -1466,6 +1552,7 @@ public class TreeMap<K,V>
             return (e == null || tooHigh(e.key)) ? null : e;
         }
 
+        // 获得NavigableSubMap中<=key的最近Entry节点，逻辑同上
         final TreeMap.Entry<K,V> absFloor(K key) {
             if (tooHigh(key))
                 return absHighest();
@@ -1473,6 +1560,7 @@ public class TreeMap<K,V>
             return (e == null || tooLow(e.key)) ? null : e;
         }
 
+        // 获得NavigableSubMap中<key的最近Entry节点，逻辑同上
         final TreeMap.Entry<K,V> absLower(K key) {
             if (tooHigh(key))
                 return absHighest();
@@ -1481,13 +1569,16 @@ public class TreeMap<K,V>
         }
 
         /** Returns the absolute high fence for ascending traversal */
+        // 获得TreeMap中最大key的Entry节点
         final TreeMap.Entry<K,V> absHighFence() {
+            // TODO 没太看懂，从最大值处结束就返回null？
             return (toEnd ? null : (hiInclusive ?
                                     m.getHigherEntry(hi) :
                                     m.getCeilingEntry(hi)));
         }
 
         /** Return the absolute low fence for descending traversal  */
+        // 获得TreeMap中最小key的Entry节点，逻辑同上
         final TreeMap.Entry<K,V> absLowFence() {
             return (fromStart ? null : (loInclusive ?
                                         m.getLowerEntry(lo) :
@@ -1497,6 +1588,7 @@ public class TreeMap<K,V>
         // Abstract methods defined in ascending vs descending classes
         // These relay to the appropriate absolute versions
 
+        // 子类的排序规则不同，定义抽象方法交给子类实现
         abstract TreeMap.Entry<K,V> subLowest();
         abstract TreeMap.Entry<K,V> subHighest();
         abstract TreeMap.Entry<K,V> subCeiling(K key);
@@ -1522,20 +1614,27 @@ public class TreeMap<K,V>
             return (fromStart && toEnd) ? m.size() : entrySet().size();
         }
 
+        // 判断是否存在指定的key
         public final boolean containsKey(Object key) {
             return inRange(key) && m.containsKey(key);
         }
 
+        // 添加单个元素
         public final V put(K key, V value) {
+            // 如果key不在范围内，就抛出异常
             if (!inRange(key))
                 throw new IllegalArgumentException("key out of range");
+            // 添加单个元素
             return m.put(key, value);
         }
 
+        // 获得单个元素
         public final V get(Object key) {
+            // 校验key的范围，如果不在返回null，如果在就返回该元素
             return !inRange(key) ? null :  m.get(key);
         }
 
+        // 删除单个元素，逻辑同上
         public final V remove(Object key) {
             return !inRange(key) ? null : m.remove(key);
         }
@@ -1580,14 +1679,17 @@ public class TreeMap<K,V>
             return key(subHighest());
         }
 
+        // 获得首个Entry节点
         public final Map.Entry<K,V> firstEntry() {
             return exportEntry(subLowest());
         }
 
+        // 获得尾部Entry节点
         public final Map.Entry<K,V> lastEntry() {
             return exportEntry(subHighest());
         }
 
+        // 删除并返回首个Entry节点
         public final Map.Entry<K,V> pollFirstEntry() {
             TreeMap.Entry<K,V> e = subLowest();
             Map.Entry<K,V> result = exportEntry(e);
@@ -1596,6 +1698,7 @@ public class TreeMap<K,V>
             return result;
         }
 
+        // 删除并返回尾部Entry节点
         public final Map.Entry<K,V> pollLastEntry() {
             TreeMap.Entry<K,V> e = subHighest();
             Map.Entry<K,V> result = exportEntry(e);
@@ -1609,6 +1712,7 @@ public class TreeMap<K,V>
         transient EntrySetView entrySetView;
         transient KeySet<K> navigableKeySetView;
 
+        // 获得正序的keySet
         public final NavigableSet<K> navigableKeySet() {
             KeySet<K> nksv = navigableKeySetView;
             return (nksv != null) ? nksv :
@@ -1619,6 +1723,7 @@ public class TreeMap<K,V>
             return navigableKeySet();
         }
 
+        // 获得倒序的keySet
         public NavigableSet<K> descendingKeySet() {
             return descendingMap().navigableKeySet();
         }
@@ -1692,10 +1797,15 @@ public class TreeMap<K,V>
         /**
          * Iterators for SubMaps
          */
+        // SubMap的迭代器
         abstract class SubMapIterator<T> implements Iterator<T> {
+            // 最后返回的节点
             TreeMap.Entry<K,V> lastReturned;
+            // 下一个节点
             TreeMap.Entry<K,V> next;
+            // 遍历的上限key，如果遍历到该key则说明已经超过范围了
             final Object fenceKey;
+            // 当前的修改次数
             int expectedModCount;
 
             SubMapIterator(TreeMap.Entry<K,V> first,
@@ -1706,10 +1816,12 @@ public class TreeMap<K,V>
                 fenceKey = fence == null ? UNBOUNDED : fence.key;
             }
 
+            // 是否还有下一个节点
             public final boolean hasNext() {
                 return next != null && next.key != fenceKey;
             }
 
+            // 获得下一个Entry节点
             final TreeMap.Entry<K,V> nextEntry() {
                 TreeMap.Entry<K,V> e = next;
                 if (e == null || e.key == fenceKey)
@@ -1721,6 +1833,7 @@ public class TreeMap<K,V>
                 return e;
             }
 
+            // 获得前一个Entry节点
             final TreeMap.Entry<K,V> prevEntry() {
                 TreeMap.Entry<K,V> e = next;
                 if (e == null || e.key == fenceKey)
@@ -1732,6 +1845,7 @@ public class TreeMap<K,V>
                 return e;
             }
 
+            // 删除节点，正序遍历
             final void removeAscending() {
                 if (lastReturned == null)
                     throw new IllegalStateException();
@@ -1745,6 +1859,7 @@ public class TreeMap<K,V>
                 expectedModCount = m.modCount;
             }
 
+            // 删除节点，倒序遍历
             final void removeDescending() {
                 if (lastReturned == null)
                     throw new IllegalStateException();
@@ -1785,15 +1900,18 @@ public class TreeMap<K,V>
         }
 
         // Implement minimal Spliterator as KeySpliterator backup
+        // 获得SubMap的正序迭代器
         final class SubMapKeyIterator extends SubMapIterator<K>
             implements Spliterator<K> {
             SubMapKeyIterator(TreeMap.Entry<K,V> first,
                               TreeMap.Entry<K,V> fence) {
                 super(first, fence);
             }
+            // 实现next方法
             public K next() {
                 return nextEntry().key;
             }
+            // 实现正序的移除方法
             public void remove() {
                 removeAscending();
             }
@@ -1823,6 +1941,7 @@ public class TreeMap<K,V>
             }
         }
 
+        // 获得SubMap的倒序迭代器，逻辑同上
         final class DescendingSubMapKeyIterator extends SubMapIterator<K>
             implements Spliterator<K> {
             DescendingSubMapKeyIterator(TreeMap.Entry<K,V> last,
@@ -1986,6 +2105,7 @@ public class TreeMap<K,V>
                                           false, fromKey, inclusive);
         }
 
+        // 获得倒序descendingMap
         public NavigableMap<K,V> descendingMap() {
             NavigableMap<K,V> mv = descendingMapView;
             return (mv != null) ? mv :
@@ -2013,6 +2133,7 @@ public class TreeMap<K,V>
             }
         }
 
+        // 获得Entry集合
         public Set<Map.Entry<K,V>> entrySet() {
             EntrySetView es = entrySetView;
             return (es != null) ? es : (entrySetView = new DescendingEntrySetView());
@@ -2147,6 +2268,7 @@ public class TreeMap<K,V>
         Entry<K,V> p = root;
         if (p != null)
             while (p.left != null)
+                // 循环遍历，直到最左节点
                 p = p.left;
         return p;
     }
@@ -2159,6 +2281,7 @@ public class TreeMap<K,V>
         Entry<K,V> p = root;
         if (p != null)
             while (p.right != null)
+                // 循环遍历，直到最右节点
                 p = p.right;
         return p;
     }
@@ -2166,16 +2289,21 @@ public class TreeMap<K,V>
     /**
      * Returns the successor of the specified Entry, or null if no such.
      */
+    // 获得指定节点的继任节点
     static <K,V> TreeMap.Entry<K,V> successor(Entry<K,V> t) {
+        // 如果t为空，则返回null
         if (t == null)
             return null;
+        // 如果右子树非空，就取右子树的最小值，也就是右子树中的最左节点
         else if (t.right != null) {
             Entry<K,V> p = t.right;
             while (p.left != null)
                 p = p.left;
             return p;
         } else {
+            // 如果右子树为空，就先获得t的父节点
             Entry<K,V> p = t.parent;
+            // 不断向上遍历父节点，直到子节点ch不是父节点p的右子节点
             Entry<K,V> ch = t;
             while (p != null && ch == p.right) {
                 ch = p;
@@ -2188,18 +2316,25 @@ public class TreeMap<K,V>
     /**
      * Returns the predecessor of the specified Entry, or null if no such.
      */
+    // 返回的是中序遍历中t的前驱节点，画个图就看出来了
     static <K,V> Entry<K,V> predecessor(Entry<K,V> t) {
         if (t == null)
             return null;
+        // 如果t的左子树非空，则取左子树的最大值
         else if (t.left != null) {
             Entry<K,V> p = t.left;
             while (p.right != null)
                 p = p.right;
             return p;
+            // 如果t的左子树为空
         } else {
+            // 先找到t的父节点
             Entry<K,V> p = t.parent;
+            // TODO 不太懂
+            // 不断向上遍历父节点，直到子节点ch不是父节点p的左子节点
             Entry<K,V> ch = t;
             while (p != null && ch == p.left) {
+                // 继续遍历的条件，必须是子节点ch是父节点p的左子节点
                 ch = p;
                 p = p.parent;
             }
@@ -2320,43 +2455,61 @@ public class TreeMap<K,V>
      * Delete node p, and then rebalance the tree.
      */
     private void deleteEntry(Entry<K,V> p) {
+        // 修改次数+1
         modCount++;
+        // size-1
         size--;
 
         // If strictly internal, copy successor's element to p and then make p
         // point to successor.
+        // 如果被删除的节点p既有左子节点，又有右子节点
         if (p.left != null && p.right != null) {
+            // 获得右子树的最小值
             Entry<K,V> s = successor(p);
+            // 用s节点的key、value取代p
             p.key = s.key;
             p.value = s.value;
+            //在后续步骤里删除s节点
             p = s;
         } // p has 2 children
 
         // Start fixup at replacement node, if it exists.
+        // 此时p肯定要么只有左子树、要么只有右子树、要么就没有子树，replacement是将要替代p节点的那个节点
         Entry<K,V> replacement = (p.left != null ? p.left : p.right);
 
+        // p有子节点的情况
         if (replacement != null) {
             // Link replacement to parent
+            // 替代者节点把父节点指向p的父节点
             replacement.parent = p.parent;
+            // 如果p的父节点为空，则说明p是根节点，那就把替代者节点设置为root节点
             if (p.parent == null)
                 root = replacement;
+            // 如果p是其父节点的左子节点，则把p父节点的左子节点指向替代者
             else if (p == p.parent.left)
                 p.parent.left  = replacement;
+            // 如果p是其父节点的右子节点，则把p父节点的右子节点指向替代者
             else
                 p.parent.right = replacement;
 
             // Null out links so they are OK to use by fixAfterDeletion.
+            // 置空p的所有指向
             p.left = p.right = p.parent = null;
 
             // Fix replacement
+            // 如果p的颜色是黑色，则执行自平衡
             if (p.color == BLACK)
                 fixAfterDeletion(replacement);
         } else if (p.parent == null) { // return if we are the only node.
+            // 如果p没有父节点，则说明删除的是根节点，置空root即可
             root = null;
         } else { //  No children. Use self as phantom replacement and unlink.
+            // 如果被删除节点既没左子树又没右子树
+            // 如果p的颜色是黑色，则执行自平衡
             if (p.color == BLACK)
                 fixAfterDeletion(p);
 
+            // 删除p和其父节点的相互指向
             if (p.parent != null) {
                 if (p == p.parent.left)
                     p.parent.left = null;
@@ -2444,15 +2597,19 @@ public class TreeMap<K,V>
      *             or by the keys' natural ordering if the TreeMap has no
      *             Comparator).
      */
+    // 序列化
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException {
         // Write out the Comparator and any hidden stuff
+        // 写入非静态属性、非transient属性
         s.defaultWriteObject();
 
         // Write out size (number of Mappings)
+        // 写入key-value键值对数量
         s.writeInt(size);
 
         // Write out keys and values (alternating)
+        // 写入具体的key-value键值对
         for (Iterator<Map.Entry<K,V>> i = entrySet().iterator(); i.hasNext(); ) {
             Map.Entry<K,V> e = i.next();
             s.writeObject(e.getKey());
@@ -2464,14 +2621,18 @@ public class TreeMap<K,V>
      * Reconstitute the {@code TreeMap} instance from a stream (i.e.,
      * deserialize it).
      */
+    // 反序列化为TreeMap对象
     private void readObject(final java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
         // Read in the Comparator and any hidden stuff
+        // 读取非静态属性、非transient属性
         s.defaultReadObject();
 
         // Read in size
+        // 读取key-value键值对数量size
         int size = s.readInt();
 
+        // 使用输入流构建红黑树，因为序列化时就是顺序的，所以输入流也是顺序的
         buildFromSorted(size, null, s, null);
     }
 
