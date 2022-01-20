@@ -95,6 +95,8 @@ public class TreeSet<E> extends AbstractSet<E>
     /**
      * The backing map.
      */
+    // TreeSet只有一个属性m
+    // key存储值，value统一使用一个空Object对象
     private transient NavigableMap<E,Object> m;
 
     // Dummy value to associate with an Object in the backing Map
@@ -157,6 +159,7 @@ public class TreeSet<E> extends AbstractSet<E>
      */
     public TreeSet(Collection<? extends E> c) {
         this();
+        // 批量添加
         addAll(c);
     }
 
@@ -169,6 +172,7 @@ public class TreeSet<E> extends AbstractSet<E>
      */
     public TreeSet(SortedSet<E> s) {
         this(s.comparator());
+        // 批量添加
         addAll(s);
     }
 
@@ -177,6 +181,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *
      * @return an iterator over the elements in this set in ascending order
      */
+    // 正序迭代器
     public Iterator<E> iterator() {
         return m.navigableKeySet().iterator();
     }
@@ -187,6 +192,7 @@ public class TreeSet<E> extends AbstractSet<E>
      * @return an iterator over the elements in this set in descending order
      * @since 1.6
      */
+    // 倒序迭代器
     public Iterator<E> descendingIterator() {
         return m.descendingKeySet().iterator();
     }
@@ -194,6 +200,7 @@ public class TreeSet<E> extends AbstractSet<E>
     /**
      * @since 1.6
      */
+    // 转换成Set
     public NavigableSet<E> descendingSet() {
         return new TreeSet<>(m.descendingMap());
     }
@@ -230,6 +237,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *         and this set uses natural ordering, or its comparator
      *         does not permit null elements
      */
+    // 判断key是否存在
     public boolean contains(Object o) {
         return m.containsKey(o);
     }
@@ -251,6 +259,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *         and this set uses natural ordering, or its comparator
      *         does not permit null elements
      */
+    // 添加单个元素，返回添加是否成功
     public boolean add(E e) {
         return m.put(e, PRESENT)==null;
     }
@@ -272,6 +281,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *         and this set uses natural ordering, or its comparator
      *         does not permit null elements
      */
+    // 移除单个元素，返回是否移除成功
     public boolean remove(Object o) {
         return m.remove(o)==PRESENT;
     }
@@ -295,6 +305,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *         if any element is null and this set uses natural ordering, or
      *         its comparator does not permit null elements
      */
+    // 批量添加，逻辑类似TreeMap
     public  boolean addAll(Collection<? extends E> c) {
         // Use linear-time version if applicable
         if (m.size()==0 && c.size() > 0 &&
@@ -410,6 +421,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *         does not permit null elements
      * @since 1.6
      */
+    // 逻辑类似TreeMap
     public E lower(E e) {
         return m.lowerKey(e);
     }
@@ -471,13 +483,16 @@ public class TreeSet<E> extends AbstractSet<E>
      */
     @SuppressWarnings("unchecked")
     public Object clone() {
+        // 创建克隆对象
         TreeSet<E> clone;
         try {
+            // 调用父类的clone方法
             clone = (TreeSet<E>) super.clone();
         } catch (CloneNotSupportedException e) {
             throw new InternalError(e);
         }
 
+        // 创建TreeMap对象，赋值给clone的m属性
         clone.m = new TreeMap<>(m);
         return clone;
     }
@@ -494,6 +509,7 @@ public class TreeSet<E> extends AbstractSet<E>
      *             set's Comparator, or by the elements' natural ordering if
      *             the set has no Comparator).
      */
+    // 序列化，逻辑类似TreeMap
     private void writeObject(java.io.ObjectOutputStream s)
         throws java.io.IOException {
         // Write out any hidden stuff
@@ -514,6 +530,7 @@ public class TreeSet<E> extends AbstractSet<E>
      * Reconstitute the {@code TreeSet} instance from a stream (that is,
      * deserialize it).
      */
+    // 反序列化，逻辑类似TreeMap
     private void readObject(java.io.ObjectInputStream s)
         throws java.io.IOException, ClassNotFoundException {
         // Read in any hidden stuff
